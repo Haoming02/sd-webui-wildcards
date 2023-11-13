@@ -1,61 +1,56 @@
-import os
 import random
 import sys
+import os
+import re
 
-from modules import scripts, script_callbacks, shared
+from modules import scripts
 
-warned_about_files = {}
-repo_dir = scripts.basedir()
-
+wildcards_folder = os.path.join(scripts.basedir(), 'wildcards')
 
 class WildcardsScript(scripts.Script):
     def title(self):
-        return "Simple wildcards"
+        return 'Neo Wildcards'
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
-    def replace_wildcard(self, text, gen):
-        if " " in text or len(text) == 0:
-            return text
+    def replace_prompts(self, prompt:str, seed:int):
+        if len(prompt.strip()) == 0:
+            return prompt
 
-        wildcards_dir = shared.cmd_opts.wildcards_dir or os.path.join(repo_dir, "wildcards")
+        def replace(match):
+            key = match.group(1)
 
-        replacement_file = os.path.join(wildcards_dir, f"{text}.txt")
-        if os.path.exists(replacement_file):
-            with open(replacement_file, encoding="utf8") as f:
-                return gen.choice(f.read().splitlines())
-        else:
-            if replacement_file not in warned_about_files:
-                print(f"File {replacement_file} not found for the __{text}__ wildcard.", file=sys.stderr)
-                warned_about_files[replacement_file] = 1
+            try:
+                with open(os.path.join(wildcards_folder, f'{key}.txt'), 'r') as Tags:
+                    lines = Tags.read().strip().split('\n')
 
-        return text
+                l = len(lines)
 
-    def replace_prompts(self, prompts, seeds):
-        res = []
+                random.seed(seed)
+                i = random.randint(1, l)
 
-        for i, text in enumerate(prompts):
-            gen = random.Random()
-            gen.seed(seeds[0 if shared.opts.wildcards_same_seed else i])
+                return lines[i - 1]
 
-            res.append("".join(self.replace_wildcard(chunk, gen) for chunk in text.split("__")))
+            except FileNotFoundError:
+                print(f'\n\n[Wildcards] File "{key}" is not Found!\n')
+                return ''
 
-        return res
+        pattern = re.compile(r'\{([^}]+)\}')
+        result = pattern.sub(replace, prompt)
+
+        return result
 
     def process(self, p):
-        original_prompt = p.all_prompts[0]
+        batch_size = len(p.all_prompts)
 
-        p.all_prompts = self.replace_prompts(p.all_prompts, p.all_seeds)
-        if getattr(p, 'all_hr_prompts', None) is not None:
-            p.all_hr_prompts = self.replace_prompts(p.all_hr_prompts, p.all_seeds)
+        for i in range(batch_size):
+            p.all_prompts[i] = self.replace_prompts(p.all_prompts[i], p.all_seeds[i])
+            p.all_negative_prompts[i] = self.replace_prompts(p.all_negative_prompts[i], p.all_seeds[i])
 
-        if original_prompt != p.all_prompts[0]:
-            p.extra_generation_params["Wildcard prompt"] = original_prompt
+            if hasattr(p, 'all_hr_prompts') and p.all_hr_prompts is not None and len(p.all_hr_prompts) > 0:
+                p.all_hr_prompts[i] = self.replace_prompts(p.all_hr_prompts[i], p.all_seeds[i])
+            if hasattr(p, 'all_hr_negative_prompts') and p.all_hr_negative_prompts is not None and len(p.all_hr_negative_prompts) > 0:
+                p.all_hr_negative_prompts[i] = self.replace_prompts(p.all_hr_negative_prompts[i], p.all_seeds[i])
 
-
-def on_ui_settings():
-    shared.opts.add_option("wildcards_same_seed", shared.OptionInfo(False, "Use same seed for all images", section=("wildcards", "Wildcards")))
-
-
-script_callbacks.on_ui_settings(on_ui_settings)
+        return p

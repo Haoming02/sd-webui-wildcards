@@ -1,18 +1,16 @@
-# Wildcards
-An extension version of a script from https://github.com/jtkelm2/stable-diffusion-webui-1/blob/main/scripts/wildcards.py
+# SD Webui Wildcards
+This is an Extension for the [Automatic1111 Webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), which allows you to use wildcards in your prompts.
 
-Allows you to use `__name__` syntax in your prompt to get a random line from a file named `name.txt` in the wildcards directory.
+**Note:** Since I chose to use **curly brackets** as the syntax, this Extension will be incompatible with many other prompt-assisting Extensions. *(**eg.** [Dynamic Prompts](https://github.com/adieyal/sd-dynamic-prompts))*
 
-## Install
-To install from webui, go to `Extensions -> Install from URL`, paste `https://github.com/AUTOMATIC1111/stable-diffusion-webui-wildcards.git`
-into URL field, and press Install.
+## How to Use
+When you write the prompts *(works for `positive prompt`, `negative prompt`, and `hires. fix prompts`)*, you can use the syntax `{trigger}` to invoke the wildcards. This Extension will then replace the syntax with a random entry from the specified file.
+The **trigger** refers to the **filename** of the wildcard file. Within the file, you can write multiple available tags, each in its own separate line.
 
-## Install manually
-Alternatively, to install by hand:
+> An example file `color.txt` is provided
 
-From your base `stable-diffusion-webui` directory, run the following command to install:
-```
-git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-wildcards extensions/stable-diffusion-webui-wildcards
-```
+> **Tip:** You can use ChatGPT to generate a list of tags for you
 
-Then restart the webui.
+<hr>
+
+<sup> Yes, I rewrote this Extension solely because I want to use `{trigger}` instead of `__trigger__` </sup>
